@@ -10,8 +10,14 @@ def get_example_users():
         {"id": 2, "name": "Charlie"},
     ]
     return users
+
+def delete_user_files(keep_ids: list[int], users_folder: Path):
+    for file in users_folder.glob("*.json"):
+        user_id = file.name.split("_")[0].lstrip("0")
+        if user_id not in keep_ids:
+            file.unlink()
  
-def get_real_users(ids: list[int]) -> list[dict]:
+def get_real_users(ids: list[int], delete: bool, users_folder: Path) -> list[dict]:
     if len(ids) == 0:
         response = httpx.get("https://jsonplaceholder.typicode.com/users")
         users = response.json()
@@ -21,6 +27,8 @@ def get_real_users(ids: list[int]) -> list[dict]:
             response = httpx.get(f"https://jsonplaceholder.typicode.com/users/{user_id}")
             user = response.json()
             users.append(user)
+        if delete:
+            delete_user_files(ids, users_folder)
     return users
  
 def create_user_file(user: dict, users_folder: Path, args: Namespace):
@@ -52,14 +60,7 @@ if __name__ == "__main__":
    
     parser.add_argument("-v", "--verbose", action="count", default=0)
     parser.add_argument("--id", action="append", default=[], type=int)
-   
-    # Accept --delete flag / argument
-    # If it is there, delete all the files that aren't currently saved
-    # For example, python cli.py --id 2 --id 7 --save --delete
-    # Will save the files for users 2 and 7 but delete all other files in that folder
-    # Delete with Path("somefile.txt").unlink()
-    # You can search files with Path("users").glob("*.json")
-    # BE CAREFUL - don't delete files if you're not sure
+    parser.add_argument("--delete", action="store_true")
    
     # Add try except blocks around each network request (httpx.get and httpx.post)
     # Also handle cases where the status is not 200-299 in the same way
@@ -83,7 +84,7 @@ if __name__ == "__main__":
             print("Getting users")
         if args.verbose >= 2:
             print(f"Up to maximum of {args.max}")
-        users = get_real_users(args.id)
+        users = get_real_users(args.id, args.delete, users_folder)
         for user in users[:args.max]:
             create_user_file(user, users_folder, args)
  
