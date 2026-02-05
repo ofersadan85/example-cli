@@ -12,9 +12,12 @@ def get_example_users():
     return users
 
 def delete_user_files(keep_ids: list[int], users_folder: Path):
+    keep_ids_str = []
+    for id in keep_ids:
+        keep_ids_str.append(str(id))
     for file in users_folder.glob("*.json"):
         user_id = file.name.split("_")[0].lstrip("0")
-        if user_id not in keep_ids:
+        if user_id not in keep_ids_str:
             file.unlink(True)
  
 def get_real_users(ids: list[int], delete: bool, users_folder: Path) -> list[dict]:
@@ -77,9 +80,6 @@ if __name__ == "__main__":
     parser.add_argument("--id", action="append", default=[], type=int)
     parser.add_argument("--delete", action="store_true")
 
-    # Create tests for every function
-     
-       
     args = parser.parse_args()
     print(args)
    
