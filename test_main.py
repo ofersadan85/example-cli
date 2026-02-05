@@ -16,3 +16,6 @@ def test_delete():
     for file in user_files:
         user_id = file.name.split("_")[0].lstrip("0")
         assert user_id in ["3", "4"]
+        
+        
+# TODO: Write more tests for each function
