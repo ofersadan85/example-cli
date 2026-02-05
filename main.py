@@ -24,9 +24,14 @@ def get_real_users(ids: list[int], delete: bool, users_folder: Path) -> list[dic
     else:
         users = []
         for user_id in ids:
-            response = httpx.get(f"https://jsonplaceholder.typicode.com/users/{user_id}")
-            user = response.json()
-            users.append(user)
+            try:
+                response = httpx.get(f"https://jsonplaceholder.typicode.com/users/{user_id}")
+                user = response.json()
+                if user == {}:
+                    raise ValueError("The user returned was empty")
+                users.append(user)
+            except (httpx.HTTPError, ValueError):
+                print(f"Warning: could not download user id {user_id}")
         if delete:
             delete_user_files(ids, users_folder)
     return users
@@ -61,11 +66,6 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="count", default=0)
     parser.add_argument("--id", action="append", default=[], type=int)
     parser.add_argument("--delete", action="store_true")
-   
-    # Add try except blocks around each network request (httpx.get and httpx.post)
-    # Also handle cases where the status is not 200-299 in the same way
-    # When errors occur, skip that file / user and continue
-    # Example `python cli.py get --id 4 --id 18 --id 2`
    
     # Optional: Also handle file errors (file not found and permission errors)
     # For this, let's add another command to get/create => read
