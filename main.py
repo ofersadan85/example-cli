@@ -15,7 +15,7 @@ def delete_user_files(keep_ids: list[int], users_folder: Path):
     for file in users_folder.glob("*.json"):
         user_id = file.name.split("_")[0].lstrip("0")
         if user_id not in keep_ids:
-            file.unlink()
+            file.unlink(True)
  
 def get_real_users(ids: list[int], delete: bool, users_folder: Path) -> list[dict]:
     if len(ids) == 0:
@@ -51,10 +51,20 @@ def send_new_user(new_user: dict) -> dict:
     user = response.json()
     return user
    
+def read_user_file(id: int, users_folder: Path):
+    file_list = list(users_folder.glob(f"*{id}_*.json"))
+    if len(file_list) == 0:
+        print(f"No file found for id {id}")
+    for file in file_list:
+        print(file)
+        try:
+            print(file.read_text())
+        except (FileNotFoundError, PermissionError) as err:
+            print(f"Could not open {file}: {err}")
    
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("action", choices=["get", "create"], help="The action we want to execute [get or create]")
+    parser.add_argument("action", choices=["get", "create", "read"], help="The action we want to execute")
     parser.add_argument("--username", help="Your username")
     parser.add_argument("--email", help="A valid email address")
     parser.add_argument("--name", help="Your full name")
@@ -66,11 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="count", default=0)
     parser.add_argument("--id", action="append", default=[], type=int)
     parser.add_argument("--delete", action="store_true")
-   
-    # Optional: Also handle file errors (file not found and permission errors)
-    # For this, let's add another command to get/create => read
-    # Example 'python cli.py read --id 5 --id 8`
- 
+
     # Create tests for every function
      
        
@@ -86,7 +92,10 @@ if __name__ == "__main__":
             print(f"Up to maximum of {args.max}")
         users = get_real_users(args.id, args.delete, users_folder)
         for user in users[:args.max]:
-            create_user_file(user, users_folder, args)
+            try:
+                create_user_file(user, users_folder, args)
+            except PermissionError:
+                print(f"Warning: could not save user {user}")
  
     if args.action == "create":
         if args.username is None or args.email is None or args.name is None:
@@ -94,4 +103,12 @@ if __name__ == "__main__":
             exit("when using create you must also specify --username, --email and --name")
        
         user = send_new_user({"username": args.username, "email": args.email, "name": args.name})
-        create_user_file(user, users_folder, args)
+        try:
+            create_user_file(user, users_folder, args)
+        except PermissionError:
+            print(f"Warning: could not save user {user}")
+            
+    if args.action == "read":
+        for id in args.id:
+            read_user_file(id, users_folder)
+ 
